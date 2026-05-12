@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/", "destination": "/mappa_combinata_1_ora_pordenone_san_dona.html" }
+  ]
+}
