@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mappa combinata 1 ora auto — Pordenone + San Donà di Piave</title>
+  <title>Mappa combinata 1 ora auto — Pordenone + San Donà di Piave | Città con impianti calcio</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <style>
     html, body, #map { height: 100%; margin: 0; font-family: Arial, Helvetica, sans-serif; }
@@ -14,7 +14,7 @@
       border-radius: 12px;
       box-shadow: 0 8px 24px rgba(0,0,0,.25);
       line-height: 1.35;
-      max-width: 390px;
+      max-width: 430px;
       font-size: 13px;
       margin-bottom: 8px;
     }
@@ -37,7 +37,6 @@
       vertical-align:-1px;
       border:1px solid rgba(0,0,0,.25);
     }
-
     .pordenone { background:#ff0092; }
     .sandona { background:#00a8ff; }
     .overlap { background:linear-gradient(45deg,#ff0092 0 35%,#7b2cff 35% 65%,#00a8ff 65% 100%); }
@@ -46,19 +45,72 @@
     .inside { background:#2ecc71; }
     .edge { background:#f39c12; }
     .outside { background:#e74c3c; }
-
+    .local { background:#34495e; }
+    .football { background:#111111; }
     .note { color:#333; font-size:12px; margin-top:8px; }
     .leaflet-popup-content { font-size: 13px; }
+    .route-box {
+      margin-top: 8px;
+      padding: 8px;
+      border-radius: 8px;
+      background: rgba(0,0,0,.05);
+      line-height: 1.45;
+    }
+    .route-title { font-weight: 700; margin-bottom: 4px; }
+    .route-muted { color:#555; font-size:12px; }
 
     .legend-stack {
       display: flex;
       flex-direction: column;
       gap: 8px;
     }
+    .legend-toggle {
+      width: fit-content;
+      background: rgba(29,29,27,.92);
+      color: white;
+      border: 0;
+      border-radius: 999px;
+      padding: 9px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(0,0,0,.25);
+      margin-bottom: 8px;
+    }
+    .legend-toggle:hover { background: rgba(29,29,27,1); }
+    .legend-content {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .legend-stack.open .legend-content {
+      display: flex;
+    }
+
+    .city-label {
+      background: rgba(255,255,255,.92);
+      border: 1px solid rgba(0,0,0,.18);
+      border-radius: 999px;
+      padding: 2px 7px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #1d1d1b;
+      box-shadow: 0 2px 6px rgba(0,0,0,.18);
+      white-space: nowrap;
+    }
+    .counter {
+      background: rgba(29,29,27,.88);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      box-shadow: 0 4px 18px rgba(0,0,0,.25);
+    }
 
     @media (max-width: 700px) {
-      .legend { max-width: 300px; font-size: 12px; padding: 12px; }
+      .legend { max-width: 310px; font-size: 12px; padding: 12px; }
       .legend h3 { font-size: 14px; }
+      .city-label { font-size: 10px; padding: 1px 6px; }
     }
   </style>
 </head>
@@ -76,150 +128,53 @@
     scrollWheelZoom: true
   });
 
-  const satellite = L.tileLayer(
+  L.tileLayer(
     'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    {
-      attribution: 'Tiles © Esri — Mappa indicativa Righello',
-      maxZoom: 18
-    }
+    { attribution: 'Tiles © Esri — Mappa indicativa Righello', maxZoom: 18 }
   ).addTo(map);
 
-  const labels = L.tileLayer(
+  L.tileLayer(
     'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
-    {
-      attribution: 'Labels © Esri',
-      maxZoom: 18,
-      pane: 'overlayPane'
-    }
+    { attribution: 'Labels © Esri', maxZoom: 18, pane: 'overlayPane' }
   ).addTo(map);
 
-  // Area Pordenone ~1 ora auto.
   const pordenone60 = [
-    [45.600, 12.170], // Mestre / Mogliano limite sud-ovest
-    [45.650, 12.050], // Treviso ovest limite
-    [45.780, 12.030], // Montebelluna / Asolo limite
-    [45.930, 12.030], // Valdobbiadene / Follina limite
-    [46.080, 12.120], // Belluno sud / Alpago limite
-    [46.270, 12.270], // Longarone / Vajont limite nord-ovest
-    [46.350, 12.560], // Claut / Valcellina limite nord
-    [46.330, 12.850], // Meduno / Tramonti / pedemontana nord-est
-    [46.210, 13.100], // San Daniele / Gemona sud limite
-    [46.080, 13.300], // Udine limite est
-    [45.930, 13.250], // Palmanova / Bassa friulana
-    [45.760, 13.130], // Latisana / Lignano limite
-    [45.620, 13.080], // Bibione limite
-    [45.550, 12.900], // Caorle / costa
-    [45.500, 12.600], // Jesolo limite sud
-    [45.600, 12.170]
+    [45.600, 12.170],[45.650, 12.050],[45.780, 12.030],[45.930, 12.030],
+    [46.080, 12.120],[46.270, 12.270],[46.350, 12.560],[46.330, 12.850],
+    [46.210, 13.100],[46.080, 13.300],[45.930, 13.250],[45.760, 13.130],
+    [45.620, 13.080],[45.550, 12.900],[45.500, 12.600],[45.600, 12.170]
   ];
 
-  // Area San Donà di Piave ~1 ora auto.
-  // Estesa rispetto alla versione 45 minuti: include direttrici verso Venezia/Mestre, Treviso,
-  // Conegliano/Oderzo, Portogruaro, Lignano/Bibione e costa veneta.
   const sanDona60 = [
-    [45.385, 12.250], // Venezia / laguna sud-ovest limite
-    [45.425, 12.110], // Mestre / Mira / Dolo limite
-    [45.545, 12.020], // Noale / Scorzè
-    [45.690, 12.020], // Treviso ovest / Paese limite
-    [45.835, 12.160], // Montebelluna / Nervesa limite
-    [45.940, 12.300], // Conegliano / Vittorio Veneto sud limite
-    [45.930, 12.620], // Prata / Brugnera / limite nord
-    [45.900, 12.900], // Portogruaro / Sesto al Reghena limite
-    [45.790, 13.120], // Latisana / Lignano limite est
-    [45.630, 13.100], // Bibione limite
-    [45.530, 12.970], // Caorle / Brussa
-    [45.430, 12.650], // Jesolo / Cavallino costa
+    [45.385, 12.250],[45.425, 12.110],[45.545, 12.020],[45.690, 12.020],
+    [45.835, 12.160],[45.940, 12.300],[45.930, 12.620],[45.900, 12.900],
+    [45.790, 13.120],[45.630, 13.100],[45.530, 12.970],[45.430, 12.650],
     [45.385, 12.250]
   ];
 
-  // Area sovrapposta indicativa, disegnata sopra con tratteggio viola per evidenziarla.
-  // È una stima visuale della fascia dove entrambe le isozone da 1 ora si incontrano.
   const overlapApprox = [
-    [45.500, 12.600], // Jesolo limite condiviso
-    [45.550, 12.900], // Caorle / costa
-    [45.620, 13.080], // Bibione
-    [45.760, 13.130], // Latisana
-    [45.900, 12.900], // Portogruaro / Sesto
-    [45.930, 12.620], // Prata / Brugnera
-    [45.940, 12.300], // Conegliano
-    [45.780, 12.030], // area Montebelluna/Ovest limite PN
-    [45.650, 12.050], // Treviso ovest
-    [45.600, 12.170], // Mestre/Mogliano
-    [45.500, 12.600]
+    [45.500, 12.600],[45.550, 12.900],[45.620, 13.080],[45.760, 13.130],
+    [45.900, 12.900],[45.930, 12.620],[45.940, 12.300],[45.780, 12.030],
+    [45.650, 12.050],[45.600, 12.170],[45.500, 12.600]
   ];
 
-  const pordenonePolygon = L.polygon(pordenone60, {
-    color: '#ff0092',
-    weight: 3,
-    opacity: 0.95,
-    fillColor: '#ff0092',
-    fillOpacity: 0.20,
-    dashArray: '8, 7'
-  }).addTo(map).bindPopup('<b>Area Pordenone 33170</b><br>Copertura indicativa fino a circa 1 ora in auto.');
+  L.polygon(pordenone60, {
+    color: '#ff0092', weight: 3, opacity: 0.95,
+    fillColor: '#ff0092', fillOpacity: 0.20, dashArray: '8, 7'
+  }).addTo(map);
 
-  const sanDonaPolygon = L.polygon(sanDona60, {
-    color: '#00a8ff',
-    weight: 3,
-    opacity: 0.95,
-    fillColor: '#00a8ff',
-    fillOpacity: 0.20,
-    dashArray: '8, 7'
-  }).addTo(map).bindPopup('<b>Area San Donà di Piave 30027</b><br>Copertura indicativa fino a circa 1 ora in auto.');
+  L.polygon(sanDona60, {
+    color: '#00a8ff', weight: 3, opacity: 0.95,
+    fillColor: '#00a8ff', fillOpacity: 0.20, dashArray: '8, 7'
+  }).addTo(map);
 
-  const overlapPolygon = L.polygon(overlapApprox, {
-    color: '#7b2cff',
-    weight: 2,
-    opacity: 0.95,
-    fillColor: '#7b2cff',
-    fillOpacity: 0.28,
-    dashArray: '3, 6'
-  }).addTo(map).bindPopup('<b>Zona sovrapposta indicativa</b><br>Area raggiungibile indicativamente entro 1 ora sia da Pordenone sia da San Donà di Piave.');
+  L.polygon(overlapApprox, {
+    color: '#7b2cff', weight: 2, opacity: 0.95,
+    fillColor: '#7b2cff', fillOpacity: 0.28, dashArray: '3, 6'
+  }).addTo(map);
 
-  L.marker(pordenoneCenter, {
-    title: 'Pordenone 33170'
-  }).addTo(map).bindPopup('<b>Centro mappa</b><br>Pordenone — CAP 33170');
-
-  L.marker(sanDonaCenter, {
-    title: 'San Donà di Piave 30027'
-  }).addTo(map).bindPopup('<b>Centro mappa</b><br>San Donà di Piave — CAP 30027');
-
-  const places = [
-    // Centri
-    ['Pordenone',45.95689,12.66051,'Centro area Pordenone', 'center-pn'],
-    ['San Donà di Piave',45.63488,12.57211,'Centro area San Donà', 'center-sd'],
-
-    // Area Pordenone / sovrapposta
-    ['Sacile',45.9545,12.5032,'Pordenone: ~20–25 min / San Donà: limite ~55–65 min', 'overlap'],
-    ['Aviano',46.0706,12.5886,'Pordenone: ~20–25 min', 'inside'],
-    ['Maniago',46.1706,12.7074,'Pordenone: ~30–40 min', 'inside'],
-    ['Spilimbergo',46.1124,12.9061,'Pordenone: ~30–40 min', 'inside'],
-    ['San Vito al Tagliamento',45.9167,12.8550,'Pordenone: ~25–35 min / San Donà: ~50–60 min', 'overlap'],
-    ['Casarsa della Delizia',45.9544,12.8428,'Pordenone: ~20–30 min / San Donà: limite', 'overlap'],
-    ['Codroipo',45.9630,12.9797,'Pordenone: ~35–45 min', 'inside'],
-    ['Udine',46.0711,13.2346,'Pordenone: ~50–60 min', 'edge'],
-
-    // Area San Donà / sovrapposta
-    ['Noventa di Piave',45.6601,12.5333,'San Donà: ~10 min', 'inside'],
-    ['Musile di Piave',45.6200,12.5650,'San Donà: ~5–10 min', 'inside'],
-    ['Jesolo',45.5331,12.6448,'San Donà: ~20–25 min / Pordenone: limite sud', 'overlap'],
-    ['Caorle',45.5966,12.8758,'San Donà: ~35–45 min / Pordenone: ~50–60 min', 'overlap'],
-    ['Bibione',45.6339,13.0520,'San Donà: ~55–65 min / Pordenone: ~55–65 min', 'overlap'],
-    ['Lignano Sabbiadoro',45.6880,13.1397,'Zona limite per entrambe', 'overlap'],
-    ['Mestre',45.4935,12.2463,'San Donà: ~40–55 min / Pordenone: spesso oltre 1 ora', 'edge'],
-    ['Venezia / Piazzale Roma',45.4386,12.3185,'San Donà: limite ~55–70 min', 'edge'],
-
-    // Zone chiaramente sovrapposte
-    ['Portogruaro',45.7750,12.8387,'Dentro entrambe: PN ~35–45 min / SD ~35–45 min', 'overlap'],
-    ['Oderzo',45.7819,12.4933,'Dentro entrambe: PN ~35–45 min / SD ~30–40 min', 'overlap'],
-    ['Conegliano',45.8870,12.3020,'Dentro entrambe o zona limite: PN ~35–45 min / SD ~50–60 min', 'overlap'],
-    ['Treviso',45.6669,12.2430,'Dentro/limite per entrambe', 'overlap'],
-    ['Vittorio Veneto',45.9790,12.3033,'Limite alto per entrambe', 'overlap'],
-
-    // Fuori o molto al limite
-    ['Padova',45.4064,11.8768,'Oltre 1 ora da entrambe nella maggior parte dei casi', 'outside'],
-    ['Trieste',45.6495,13.7768,'Oltre 1 ora da entrambe', 'outside'],
-    ['Belluno',46.1425,12.2167,'Limite Pordenone / oltre San Donà', 'edge']
-  ];
+  L.marker(pordenoneCenter).addTo(map).bindPopup('<b>Centro mappa</b><br>Pordenone — CAP 33170');
+  L.marker(sanDonaCenter).addTo(map).bindPopup('<b>Centro mappa</b><br>San Donà di Piave — CAP 30027');
 
   const colors = {
     'center-pn': '#ff0092',
@@ -227,59 +182,453 @@
     inside: '#2ecc71',
     edge: '#f39c12',
     outside: '#e74c3c',
-    overlap: '#7b2cff'
+    overlap: '#7b2cff',
+    local: '#34495e',
+    football: '#111111'
   };
 
-  places.forEach(([name, lat, lng, time, type]) => {
+  // Routing stradale reale/indicativo tramite OSRM.
+  // Nota: tempi senza traffico live. Distanze in km di percorso stradale, non raggio d'aria.
+  const routeCache = {};
+  const routeOrigins = {
+    pn: { name: 'Pordenone', lat: 45.95689, lng: 12.66051, color: '#ff0092' },
+    sd: { name: 'San Donà di Piave', lat: 45.63488, lng: 12.57211, color: '#00a8ff' }
+  };
+
+  function formatDuration(minutes) {
+    if (!Number.isFinite(minutes)) return 'n.d.';
+    const h = Math.floor(minutes / 60);
+    const m = Math.round(minutes % 60);
+    if (h <= 0) return `${m} min`;
+    return `${h} h ${m.toString().padStart(2, '0')} min`;
+  }
+
+  function routeKey(originKey, lat, lng) {
+    return `${originKey}_${lat.toFixed(5)}_${lng.toFixed(5)}`;
+  }
+
+  async function getDrivingRoute(originKey, lat, lng) {
+    const origin = routeOrigins[originKey];
+    const key = routeKey(originKey, lat, lng);
+    if (routeCache[key]) return routeCache[key];
+
+    const url = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${lng},${lat}?overview=false&alternatives=false&steps=false`;
+    const promise = fetch(url)
+      .then(r => {
+        if (!r.ok) throw new Error('Errore routing');
+        return r.json();
+      })
+      .then(data => {
+        if (!data.routes || !data.routes.length) throw new Error('Nessun percorso trovato');
+        const route = data.routes[0];
+        return {
+          km: route.distance / 1000,
+          min: route.duration / 60
+        };
+      });
+
+    routeCache[key] = promise;
+    return promise;
+  }
+
+  function buildPopupBase(name, text, level) {
+    const zoomLabel = level === 1 ? 'base' : level === 2 ? '9+' : level === 3 ? '10+' : level === 4 ? '11+' : '12+';
+    return `
+      <b>${name}</b><br>
+      ${text}<br>
+      <small>Filtro: località con probabile campo/stadio da calcio. Visibile da zoom ${zoomLabel}</small>
+      <div class="route-box" id="route-${slugify(name)}">
+        <div class="route-title">Distanze stradali in auto</div>
+        <div>Calcolo percorso stradale in corso…</div>
+      </div>
+      <div class="route-muted">Tempi stimati senza traffico live; km calcolati su strada, non in linea d'aria.</div>
+    `;
+  }
+
+  function slugify(str) {
+    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase();
+  }
+
+  async function updateRoutePopup(marker, name, lat, lng, text, level) {
+    marker.setPopupContent(buildPopupBase(name, text, level));
+
+    const boxId = `route-${slugify(name)}`;
+    try {
+      const [pn, sd] = await Promise.all([
+        getDrivingRoute('pn', lat, lng),
+        getDrivingRoute('sd', lat, lng)
+      ]);
+
+      const content = `
+        <b>${name}</b><br>
+        ${text}<br>
+        <small>Filtro: località con probabile campo/stadio da calcio.</small>
+        <div class="route-box">
+          <div class="route-title">Distanze stradali in auto</div>
+          <div><span style="color:${routeOrigins.pn.color};font-weight:700;">●</span> Da Pordenone: <b>${pn.km.toFixed(1)} km</b> · <b>${formatDuration(pn.min)}</b></div>
+          <div><span style="color:${routeOrigins.sd.color};font-weight:700;">●</span> Da San Donà: <b>${sd.km.toFixed(1)} km</b> · <b>${formatDuration(sd.min)}</b></div>
+        </div>
+        <div class="route-muted">Dati calcolati su percorso stradale OSRM. Tempi indicativi senza traffico live.</div>
+      `;
+      marker.setPopupContent(content);
+    } catch (err) {
+      marker.setPopupContent(`
+        <b>${name}</b><br>
+        ${text}<br>
+        <div class="route-box">
+          <div class="route-title">Distanze stradali in auto</div>
+          <div>Non riesco a calcolare il percorso in questo momento.</div>
+        </div>
+        <div class="route-muted">Serve connessione internet perché il file HTML interroga un servizio di routing stradale.</div>
+      `);
+    }
+  }
+
+  // level:
+  // 1 = principali sempre visibili
+  // 2 = comuni importanti da zoom 9+
+  // 3 = comuni medi da zoom 10+
+  // 4 = comuni/località secondarie da zoom 11+
+  // 5 = ulteriore dettaglio da zoom 12+
+  // Nota: "impianto calcio" = comune/località dove è ragionevole trovare almeno un campo/stadio comunale o società calcistica locale.
+  const places = [
+    // MAIN
+    ['Pordenone',45.95689,12.66051,'Centro area Pordenone — Stadio/impianti cittadini', 'center-pn', 1],
+    ['San Donà di Piave',45.63488,12.57211,'Centro area San Donà — Stadio/impianti cittadini', 'center-sd', 1],
+    ['Udine',46.0711,13.2346,'Pordenone: ~50–60 min — impianti calcio presenti', 'edge', 1],
+    ['Treviso',45.6669,12.2430,'Dentro/limite per entrambe — impianti calcio presenti', 'overlap', 1],
+    ['Portogruaro',45.7750,12.8387,'Dentro entrambe — impianti calcio presenti', 'overlap', 1],
+    ['Conegliano',45.8870,12.3020,'Dentro entrambe o limite — impianti calcio presenti', 'overlap', 1],
+    ['Mestre',45.4935,12.2463,'San Donà: ~40–55 min — impianti calcio presenti', 'edge', 1],
+    ['Caorle',45.5966,12.8758,'Area comune/limite — impianti calcio presenti', 'overlap', 1],
+    ['Lignano Sabbiadoro',45.6880,13.1397,'Zona limite per entrambe — impianti calcio presenti', 'overlap', 1],
+
+    // LEVEL 2
+    ['Sacile',45.9545,12.5032,'Area comune/limite — impianti calcio presenti', 'overlap', 2],
+    ['Aviano',46.0706,12.5886,'Area Pordenone — impianti calcio presenti', 'inside', 2],
+    ['Maniago',46.1706,12.7074,'Area Pordenone — impianti calcio presenti', 'inside', 2],
+    ['Spilimbergo',46.1124,12.9061,'Area Pordenone — impianti calcio presenti', 'inside', 2],
+    ['San Vito al Tagliamento',45.9167,12.8550,'Area comune/limite — impianti calcio presenti', 'overlap', 2],
+    ['Casarsa della Delizia',45.9544,12.8428,'Area comune/limite — impianti calcio presenti', 'overlap', 2],
+    ['Codroipo',45.9630,12.9797,'Area Pordenone — impianti calcio presenti', 'inside', 2],
+    ['Oderzo',45.7819,12.4933,'Dentro entrambe — impianti calcio presenti', 'overlap', 2],
+    ['Vittorio Veneto',45.9790,12.3033,'Limite alto per entrambe — impianti calcio presenti', 'overlap', 2],
+    ['Jesolo',45.5331,12.6448,'Area San Donà / limite PN — impianti calcio presenti', 'overlap', 2],
+    ['Bibione',45.6339,13.0520,'Zona limite per entrambe — impianti calcio presenti', 'overlap', 2],
+    ['Mogliano Veneto',45.5559,12.2367,'San Donà/limite — impianti calcio presenti', 'edge', 2],
+    ['Montebelluna',45.7750,12.0460,'Limite ovest — impianti calcio presenti', 'edge', 2],
+    ['Belluno',46.1425,12.2167,'Limite Pordenone — impianti calcio presenti', 'edge', 2],
+    ['Venezia / Piazzale Roma',45.4386,12.3185,'Limite San Donà — impianti calcio presenti in area Venezia', 'edge', 2],
+
+    // LEVEL 3 — PORDENONE PROVINCE / NEARBY
+    ['Cordenons',45.9844,12.7003,'Area Pordenone — impianti calcio presenti', 'inside', 3],
+    ['Porcia',45.9633,12.6136,'Area Pordenone — impianti calcio presenti', 'inside', 3],
+    ['Fontanafredda',45.9733,12.5658,'Area Pordenone — impianti calcio presenti', 'inside', 3],
+    ['Roveredo in Piano',46.0114,12.6194,'Area Pordenone — impianti calcio presenti', 'inside', 3],
+    ['Fiume Veneto',45.9281,12.7337,'Area Pordenone — impianti calcio presenti', 'inside', 3],
+    ['Azzano Decimo',45.9083,12.7150,'Area Pordenone — impianti calcio presenti', 'inside', 3],
+    ['Prata di Pordenone',45.8919,12.5967,'Area Pordenone — impianti calcio presenti', 'inside', 3],
+    ['Brugnera',45.9006,12.5367,'Area Pordenone — impianti calcio presenti', 'inside', 3],
+    ['Pasiano di Pordenone',45.8475,12.6278,'Area Pordenone — impianti calcio presenti', 'inside', 3],
+    ['Chions',45.8456,12.7125,'Area Pordenone — impianti calcio presenti', 'inside', 3],
+    ['Zoppola',45.9669,12.7714,'Area Pordenone — impianti calcio presenti', 'inside', 3],
+    ['San Quirino',46.0347,12.6781,'Area Pordenone — impianti calcio presenti', 'inside', 3],
+    ['Vivaro',46.0783,12.7764,'Area Pordenone — impianti calcio presenti', 'inside', 3],
+    ['Valvasone Arzene',45.9950,12.8628,'Area Pordenone — impianti calcio presenti', 'inside', 3],
+    ['Sesto al Reghena',45.8486,12.8150,'Area comune — impianti calcio presenti', 'overlap', 3],
+    ['Cordovado',45.8450,12.8822,'Area comune — impianti calcio presenti', 'overlap', 3],
+    ['Morsano al Tagliamento',45.8600,12.9294,'Area Pordenone — impianti calcio presenti', 'inside', 3],
+    ['Latisana',45.7831,13.0064,'Zona limite per entrambe — impianti calcio presenti', 'overlap', 3],
+    ['Palmanova',45.9054,13.3095,'Pordenone: limite ~1 ora — impianti calcio presenti', 'edge', 3],
+    ['San Daniele del Friuli',46.1617,13.0106,'Pordenone: ~55–65 min — impianti calcio presenti', 'edge', 3],
+
+    // LEVEL 3 — SAN DONA / VENETO ORIENTALE
+    ['Noventa di Piave',45.6601,12.5333,'Area San Donà — impianti calcio presenti', 'inside', 3],
+    ['Musile di Piave',45.6200,12.5650,'Area San Donà — impianti calcio presenti', 'inside', 3],
+    ['Ceggia',45.6872,12.6372,'Area San Donà — impianti calcio presenti', 'inside', 3],
+    ['Eraclea',45.5809,12.6750,'Area San Donà — impianti calcio presenti', 'inside', 3],
+    ['Torre di Mosto',45.6864,12.7056,'Area San Donà — impianti calcio presenti', 'inside', 3],
+    ['Salgareda',45.7058,12.4886,'Area San Donà — impianti calcio presenti', 'inside', 3],
+    ['Ponte di Piave',45.7131,12.4658,'Area San Donà — impianti calcio presenti', 'inside', 3],
+    ['San Biagio di Callalta',45.6903,12.3819,'Area San Donà — impianti calcio presenti', 'inside', 3],
+    ['Quarto d’Altino',45.5794,12.3735,'Area San Donà — impianti calcio presenti', 'inside', 3],
+    ['Marcon',45.5633,12.2986,'Area San Donà — impianti calcio presenti', 'inside', 3],
+    ['Aeroporto Marco Polo / Tessera',45.5053,12.3519,'Area San Donà', 'inside', 3],
+    ['Cavallino-Treporti',45.4537,12.4573,'Area San Donà limite — impianti calcio presenti', 'edge', 3],
+    ['Concordia Sagittaria',45.7571,12.8456,'Dentro entrambe — impianti calcio presenti', 'overlap', 3],
+    ['Annone Veneto',45.7981,12.6833,'Dentro entrambe — impianti calcio presenti', 'overlap', 3],
+    ['Motta di Livenza',45.7782,12.6084,'Dentro entrambe — impianti calcio presenti', 'overlap', 3],
+    ['Gorgo al Monticano',45.7878,12.5506,'Dentro entrambe — impianti calcio presenti', 'overlap', 3],
+    ['Cessalto',45.7097,12.6153,'Dentro entrambe — impianti calcio presenti', 'overlap', 3],
+
+    // LEVEL 4 — PORDENONE DETAIL
+    ['Polcenigo',46.0372,12.4942,'Impianto calcio locale/comunale', 'football', 4],
+    ['Budoia',46.0447,12.5353,'Impianto calcio locale/comunale', 'football', 4],
+    ['Caneva',45.9706,12.4494,'Impianto calcio locale/comunale', 'football', 4],
+    ['Montereale Valcellina',46.1578,12.6564,'Impianto calcio locale/comunale', 'football', 4],
+    ['Claut',46.2700,12.5139,'Limite nord — impianto calcio locale/comunale', 'edge', 4],
+    ['Vajont',46.1453,12.6961,'Impianto calcio locale/comunale', 'football', 4],
+    ['Meduno',46.2178,12.7964,'Impianto calcio locale/comunale', 'football', 4],
+    ['Sequals',46.1644,12.8294,'Impianto calcio locale/comunale', 'football', 4],
+    ['Travesio',46.1972,12.8725,'Impianto calcio locale/comunale', 'football', 4],
+    ['Pinzano al Tagliamento',46.1825,12.9444,'Impianto calcio locale/comunale', 'football', 4],
+    ['Arba',46.1456,12.7906,'Impianto calcio locale/comunale', 'football', 4],
+    ['San Giorgio della Richinvelda',46.0478,12.8717,'Impianto calcio locale/comunale', 'football', 4],
+    ['San Martino al Tagliamento',46.0167,12.8667,'Impianto calcio locale/comunale', 'football', 4],
+    ['Fanna',46.1839,12.7517,'Impianto calcio locale/comunale', 'football', 4],
+    ['Cimolais',46.2867,12.4375,'Limite nord — impianto calcio locale/comunale', 'edge', 4],
+    ['Tramonti di Sopra',46.3106,12.7906,'Limite nord — impianto calcio locale/comunale', 'edge', 4],
+    ['Tramonti di Sotto',46.2869,12.7933,'Limite nord — impianto calcio locale/comunale', 'edge', 4],
+    ['Andreis',46.2000,12.6153,'Impianto calcio locale/comunale', 'football', 4],
+    ['Barcis',46.1908,12.5606,'Impianto calcio locale/comunale', 'football', 4],
+    ['Frisanco',46.2119,12.7289,'Impianto calcio locale/comunale', 'football', 4],
+    ['Clauzetto',46.2297,12.9183,'Impianto calcio locale/comunale', 'football', 4],
+    ['Vito d’Asio',46.2344,12.9408,'Impianto calcio locale/comunale', 'football', 4],
+    ['Castelnovo del Friuli',46.1997,12.9044,'Impianto calcio locale/comunale', 'football', 4],
+    ['Spilimbergo - Tauriano',46.1050,12.9140,'Località con impianto calcio', 'football', 5],
+
+    // LEVEL 4/5 — FVG EAST/SOUTH DETAIL
+    ['Camino al Tagliamento',45.9275,12.9458,'Impianto calcio locale/comunale', 'football', 4],
+    ['Bertiolo',45.9442,13.0544,'Impianto calcio locale/comunale', 'football', 4],
+    ['Talmassons',45.9294,13.1211,'Impianto calcio locale/comunale', 'football', 4],
+    ['Basiliano',46.0144,13.1078,'Impianto calcio locale/comunale', 'football', 4],
+    ['Campoformido',46.0197,13.1628,'Impianto calcio locale/comunale', 'football', 4],
+    ['Pasian di Prato',46.0500,13.1875,'Impianto calcio locale/comunale', 'football', 4],
+    ['Tavagnacco',46.1264,13.2131,'Impianto calcio locale/comunale', 'football', 4],
+    ['Martignacco',46.0939,13.1394,'Impianto calcio locale/comunale', 'football', 4],
+    ['Fagagna',46.1125,13.0936,'Impianto calcio locale/comunale', 'football', 4],
+    ['Rive d’Arcano',46.1281,13.0328,'Impianto calcio locale/comunale', 'football', 4],
+    ['Coseano',46.0967,13.0208,'Impianto calcio locale/comunale', 'football', 4],
+    ['Dignano',46.0842,12.9417,'Impianto calcio locale/comunale', 'football', 4],
+    ['Sedegliano',46.0131,12.9761,'Impianto calcio locale/comunale', 'football', 4],
+    ['Mereto di Tomba',46.0506,13.0439,'Impianto calcio locale/comunale', 'football', 4],
+    ['Mortegliano',45.9456,13.1717,'Impianto calcio locale/comunale', 'football', 4],
+    ['Pocenia',45.8361,13.1025,'Impianto calcio locale/comunale', 'football', 4],
+    ['Muzzana del Turgnano',45.8161,13.1278,'Impianto calcio locale/comunale', 'football', 4],
+    ['Carlino',45.8058,13.1886,'Impianto calcio locale/comunale', 'football', 4],
+    ['Marano Lagunare',45.7656,13.1675,'Impianto calcio locale/comunale', 'football', 4],
+
+    // LEVEL 4 — VENETO ORIENTALE / TREVISO DETAIL
+    ['Fossalta di Piave',45.6447,12.5094,'Impianto calcio locale/comunale', 'football', 4],
+    ['Meolo',45.6206,12.4525,'Impianto calcio locale/comunale', 'football', 4],
+    ['Fossalta di Portogruaro',45.7883,12.9086,'Impianto calcio locale/comunale', 'football', 4],
+    ['Gruaro',45.8344,12.8442,'Impianto calcio locale/comunale', 'football', 4],
+    ['Pramaggiore',45.8142,12.7386,'Impianto calcio locale/comunale', 'football', 4],
+    ['Meduna di Livenza',45.8067,12.6161,'Impianto calcio locale/comunale', 'football', 4],
+    ['Chiarano',45.7308,12.5792,'Impianto calcio locale/comunale', 'football', 4],
+    ['Zenson di Piave',45.6794,12.4922,'Impianto calcio locale/comunale', 'football', 4],
+    ['Roncade',45.6283,12.3764,'Impianto calcio locale/comunale', 'football', 4],
+    ['Casale sul Sile',45.5969,12.3267,'Impianto calcio locale/comunale', 'football', 4],
+    ['Preganziol',45.6008,12.2364,'Impianto calcio locale/comunale', 'football', 4],
+    ['Silea',45.6544,12.2978,'Impianto calcio locale/comunale', 'football', 4],
+    ['Villorba',45.7122,12.2608,'Impianto calcio locale/comunale', 'football', 4],
+    ['Carbonera',45.6844,12.2853,'Impianto calcio locale/comunale', 'football', 4],
+    ['Casier',45.6422,12.2950,'Impianto calcio locale/comunale', 'football', 4],
+    ['Zero Branco',45.6006,12.1653,'Impianto calcio locale/comunale', 'football', 4],
+    ['Quinto di Treviso',45.6461,12.1656,'Impianto calcio locale/comunale', 'football', 4],
+    ['Paese',45.6761,12.1619,'Impianto calcio locale/comunale', 'football', 4],
+    ['Ponzano Veneto',45.7156,12.2047,'Impianto calcio locale/comunale', 'football', 4],
+    ['Spresiano',45.7794,12.2569,'Impianto calcio locale/comunale', 'football', 4],
+    ['Arcade',45.7842,12.2192,'Impianto calcio locale/comunale', 'football', 4],
+    ['Nervesa della Battaglia',45.8239,12.2078,'Impianto calcio locale/comunale', 'football', 4],
+    ['Giavera del Montello',45.7933,12.1669,'Impianto calcio locale/comunale', 'football', 4],
+    ['Volpago del Montello',45.7775,12.1181,'Impianto calcio locale/comunale', 'football', 4],
+    ['Povegliano',45.7581,12.2067,'Impianto calcio locale/comunale', 'football', 4],
+    ['San Vendemiano',45.8917,12.3383,'Impianto calcio locale/comunale', 'football', 4],
+    ['Susegana',45.8506,12.2583,'Impianto calcio locale/comunale', 'football', 4],
+    ['Mareno di Piave',45.8400,12.3500,'Impianto calcio locale/comunale', 'football', 4],
+    ['Vazzola',45.8369,12.4083,'Impianto calcio locale/comunale', 'football', 4],
+    ['San Fior',45.9214,12.3611,'Impianto calcio locale/comunale', 'football', 4],
+    ['Godega di Sant’Urbano',45.9292,12.3975,'Impianto calcio locale/comunale', 'football', 4],
+    ['Colle Umberto',45.9406,12.3381,'Impianto calcio locale/comunale', 'football', 4],
+    ['Cappella Maggiore',45.9703,12.3606,'Impianto calcio locale/comunale', 'football', 4],
+    ['Fregona',46.0078,12.3406,'Impianto calcio locale/comunale', 'football', 4],
+    ['Sarmede',45.9775,12.3864,'Impianto calcio locale/comunale', 'football', 4],
+    ['Cordignano',45.9506,12.4178,'Impianto calcio locale/comunale', 'football', 4],
+    ['Orsago',45.9303,12.4278,'Impianto calcio locale/comunale', 'football', 4],
+    ['Codognè',45.8697,12.4308,'Impianto calcio locale/comunale', 'football', 4],
+    ['Gaiarine',45.8786,12.4806,'Impianto calcio locale/comunale', 'football', 4],
+    ['Mansuè',45.8239,12.5353,'Impianto calcio locale/comunale', 'football', 4],
+    ['Portobuffolé',45.8575,12.5378,'Impianto calcio locale/comunale', 'football', 4],
+    ['Fontanelle',45.8333,12.4667,'Impianto calcio locale/comunale', 'football', 4],
+    ['Ormelle',45.7786,12.4242,'Impianto calcio locale/comunale', 'football', 4],
+    ['San Polo di Piave',45.7908,12.3931,'Impianto calcio locale/comunale', 'football', 4],
+    ['Cimadolmo',45.7847,12.3650,'Impianto calcio locale/comunale', 'football', 4],
+    ['Breda di Piave',45.7225,12.3303,'Impianto calcio locale/comunale', 'football', 4],
+    ['Maserada sul Piave',45.7506,12.3189,'Impianto calcio locale/comunale', 'football', 4],
+    ['Monastier di Treviso',45.6514,12.4336,'Impianto calcio locale/comunale', 'football', 4],
+    ['Zerobranco / Scorzè area',45.5750,12.1100,'Area limite — impianti calcio presenti', 'edge', 5],
+    ['Noale',45.5500,12.0717,'Limite San Donà — impianti calcio presenti', 'edge', 5],
+    ['Scorzè',45.5731,12.1111,'Limite San Donà — impianti calcio presenti', 'edge', 5],
+
+    // LEVEL 5 — FRAZIONI / LOCALITÀ UTILI / COAST DETAIL
+    ['Piancavallo',46.1100,12.5150,'Località montana — area Pordenone', 'local', 5],
+    ['Marsure',46.0650,12.5950,'Località Aviano — campo sportivo locale', 'football', 5],
+    ['Tamai',45.9510,12.5690,'Località Brugnera/Fontanafredda — campo sportivo locale', 'football', 5],
+    ['Villotta',45.9000,12.7800,'Località area Chions/San Vito — campo sportivo locale', 'football', 5],
+    ['Bannia',45.9270,12.7500,'Località Fiume Veneto — campo sportivo locale', 'football', 5],
+    ['Cimpello',45.9280,12.7200,'Località Fiume Veneto — campo sportivo locale', 'football', 5],
+    ['Tiezzo',45.9070,12.6950,'Località Azzano Decimo — campo sportivo locale', 'football', 5],
+    ['Corva',45.9310,12.6900,'Località area Pordenone — campo sportivo locale', 'football', 5],
+    ['Vallenoncello',45.9290,12.6680,'Località Pordenone — campo sportivo locale', 'football', 5],
+    ['Villanova di Pordenone',45.9480,12.6850,'Località Pordenone — campo sportivo locale', 'football', 5],
+    ['Rorai Grande',45.9700,12.6600,'Località Pordenone — campo sportivo locale', 'football', 5],
+    ['Torre di Pordenone',45.9800,12.6600,'Località Pordenone — campo sportivo locale', 'football', 5],
+    ['Villanova di Prata',45.9000,12.6100,'Località Prata — campo sportivo locale', 'football', 5],
+    ['Visinale',45.8800,12.6200,'Località Pasiano — campo sportivo locale', 'football', 5],
+    ['Cecchini',45.8800,12.6650,'Località Pasiano — campo sportivo locale', 'football', 5],
+    ['Azzanello',45.8000,12.7100,'Località Chions — campo sportivo locale', 'football', 5],
+    ['Villanova di Fossalta',45.7820,12.9000,'Località Portogruaro/Fossalta — campo sportivo locale', 'football', 5],
+    ['Summaga',45.7560,12.8100,'Località Portogruaro — campo sportivo locale', 'football', 5],
+    ['Lugugnana',45.7200,12.9700,'Località Portogruaro — campo sportivo locale', 'football', 5],
+    ['La Salute di Livenza',45.6500,12.8600,'Località Santo Stino/Caorle — campo sportivo locale', 'football', 5],
+    ['Santo Stino di Livenza',45.7300,12.6810,'Impianto calcio locale/comunale', 'football', 4],
+    ['Meolo - Losson',45.6150,12.4300,'Località area San Donà — campo sportivo locale', 'football', 5],
+    ['Passarella di Sotto',45.6000,12.6100,'Località San Donà — campo sportivo locale', 'football', 5],
+    ['Chiesanuova',45.6400,12.6150,'Località San Donà — campo sportivo locale', 'football', 5],
+    ['Calvecchia',45.6650,12.5700,'Località San Donà — campo sportivo locale', 'football', 5],
+    ['Ca’ Turcata',45.6500,12.6100,'Località San Donà — campo sportivo locale', 'football', 5],
+    ['Grassaga',45.6500,12.6600,'Località San Donà — campo sportivo locale', 'football', 5],
+    ['Passarella',45.6000,12.5800,'Località San Donà — campo sportivo locale', 'football', 5],
+    ['Croce di Musile',45.5950,12.5300,'Località Musile — campo sportivo locale', 'football', 5],
+    ['Caposile',45.5450,12.5300,'Località Musile — campo sportivo locale', 'football', 5],
+    ['Portegrandi',45.5860,12.4100,'Località Quarto d’Altino — campo sportivo locale', 'football', 5],
+    ['San Liberale',45.5500,12.3150,'Località Marcon — campo sportivo locale', 'football', 5],
+    ['Favaro Veneto',45.5050,12.2850,'Località Mestre/Venezia — impianti calcio presenti', 'football', 5],
+    ['Dese',45.5300,12.3150,'Località Venezia — campo sportivo locale', 'football', 5],
+    ['Campalto',45.4850,12.3150,'Località Venezia — campo sportivo locale', 'football', 5],
+    ['Marghera',45.4700,12.2350,'Area Mestre — impianti calcio presenti', 'football', 5],
+    ['Eraclea Mare',45.4833,12.7333,'Costa San Donà — campo sportivo locale', 'football', 5],
+    ['Porto Santa Margherita',45.5969,12.8728,'Costa / comune — campo sportivo locale', 'football', 5],
+    ['Duna Verde',45.5750,12.8028,'Costa San Donà — campo sportivo locale', 'football', 5],
+    ['Ca’ Savio',45.4542,12.4578,'Costa limite — campo sportivo locale', 'football', 5],
+    ['Punta Sabbioni',45.4397,12.4269,'Costa limite — campo sportivo locale', 'football', 5],
+    ['Cortellazzo',45.5350,12.7250,'Località Jesolo — campo sportivo locale', 'football', 5],
+    ['Jesolo Lido',45.5060,12.6460,'Località Jesolo — impianti calcio presenti', 'football', 5],
+    ['Treporti',45.4630,12.4450,'Località Cavallino — campo sportivo locale', 'football', 5],
+    ['San Michele al Tagliamento',45.7644,12.9953,'Area comune / Lignano-Bibione — impianti calcio presenti', 'football', 4],
+    ['Precenicco',45.7897,13.0753,'Limite comune — impianti calcio presenti', 'edge', 4],
+    ['Palazzolo dello Stella',45.8061,13.0806,'Limite comune — impianti calcio presenti', 'edge', 4],
+    ['Rivignano Teor',45.8750,13.0439,'Area limite — impianti calcio presenti', 'edge', 4],
+    ['Fossalon',45.7330,13.4800,'Fuori area principale verso Grado', 'outside', 5],
+    ['Grado',45.6775,13.3947,'Oltre/limite da Pordenone e San Donà', 'outside', 5],
+    ['Padova',45.4064,11.8768,'Oltre 1 ora da entrambe nella maggior parte dei casi', 'outside', 2],
+    ['Trieste',45.6495,13.7768,'Oltre 1 ora da entrambe', 'outside', 2]
+  ];
+
+  const layersByLevel = {1: L.layerGroup(), 2: L.layerGroup(), 3: L.layerGroup(), 4: L.layerGroup(), 5: L.layerGroup()};
+
+  function createCityMarker(name, lat, lng, text, type, level) {
     const marker = L.circleMarker([lat, lng], {
-      radius: type === 'center-pn' || type === 'center-sd' ? 8 : 6,
+      radius: type === 'center-pn' || type === 'center-sd' ? 8 : (level <= 2 ? 6 : level === 3 ? 5 : 4),
       color: '#ffffff',
-      weight: 2,
+      weight: level >= 5 ? 1.5 : 2,
       fillColor: colors[type],
       fillOpacity: 1
-    }).addTo(map);
+    });
 
-    marker.bindPopup(`<b>${name}</b><br>${time}`);
-  });
+    marker.bindPopup(buildPopupBase(name, text, level));
+    marker.on('click', () => updateRoutePopup(marker, name, lat, lng, text, level));
+
+    const label = L.marker([lat, lng], {
+      icon: L.divIcon({
+        className: '',
+        html: `<div class="city-label">${name}</div>`,
+        iconSize: null,
+        iconAnchor: [-10, 28]
+      }),
+      interactive: true
+    });
+
+    label.bindPopup(buildPopupBase(name, text, level));
+    label.on('click', () => updateRoutePopup(label, name, lat, lng, text, level));
+
+    layersByLevel[level].addLayer(L.layerGroup([marker, label]));
+  }
+
+  places.forEach(([name, lat, lng, text, type, level]) => createCityMarker(name, lat, lng, text, type, level));
+
+  function updateZoomLayers() {
+    const z = map.getZoom();
+    Object.values(layersByLevel).forEach(layer => { if (map.hasLayer(layer)) map.removeLayer(layer); });
+    layersByLevel[1].addTo(map);
+    if (z >= 9) layersByLevel[2].addTo(map);
+    if (z >= 10) layersByLevel[3].addTo(map);
+    if (z >= 11) layersByLevel[4].addTo(map);
+    if (z >= 12) layersByLevel[5].addTo(map);
+    document.getElementById('zoomCounter').innerHTML = `Zoom ${z} · punti visibili: ${visibleCount(z)} / ${places.length}`;
+  }
+
+  function visibleCount(z) {
+    return places.filter(p => p[5] === 1 || (z >= 9 && p[5] === 2) || (z >= 10 && p[5] === 3) || (z >= 11 && p[5] === 4) || (z >= 12 && p[5] === 5)).length;
+  }
+
+  map.on('zoomend', updateZoomLayers);
 
   const CombinedLegend = L.Control.extend({
     options: { position: 'bottomleft' },
     onAdd: function () {
       const wrapper = L.DomUtil.create('div', 'legend-stack');
 
-      const div1 = L.DomUtil.create('div', 'legend', wrapper);
+      const button = L.DomUtil.create('button', 'legend-toggle', wrapper);
+      button.type = 'button';
+      button.innerHTML = '☰ Legenda';
+
+      const content = L.DomUtil.create('div', 'legend-content', wrapper);
+
+      const div1 = L.DomUtil.create('div', 'legend', content);
       div1.innerHTML = `
         <h3>Legenda aree 1 ora auto</h3>
         <div class="legend-row"><span class="swatch pordenone"></span><b>Pordenone 33170</b> — area indicativa entro ~1 ora</div>
         <div class="legend-row"><span class="swatch sandona"></span><b>San Donà di Piave 30027</b> — area indicativa entro ~1 ora</div>
         <div class="legend-row"><span class="swatch overlap"></span><b>Sovrapposizione</b> — zona raggiungibile da entrambe le origini</div>
+        <div class="note">La zona viola/tratteggiata evidenzia la sovrapposizione stimata tra le due aree.</div>
+      `;
+
+      const div2 = L.DomUtil.create('div', 'legend', content);
+      div2.innerHTML = `
+        <h3>Legenda punti calcio e zoom</h3>
+        <div class="legend-row"><span class="badge center-pn"></span>Centro Pordenone</div>
+        <div class="legend-row"><span class="badge center-sd"></span>Centro San Donà di Piave</div>
+        <div class="legend-row"><span class="badge overlap"></span>Città/zone nella sovrapposizione</div>
+        <div class="legend-row"><span class="badge inside"></span>Zona interna principalmente a una delle due aree</div>
+        <div class="legend-row"><span class="badge edge"></span>Zona limite</div>
+        <div class="legend-row"><span class="badge football"></span>Comune/località con probabile campo o stadio da calcio</div>
+        <div class="legend-row"><span class="badge outside"></span>Spesso oltre 1 ora</div>
         <div class="note">
-          Le due aree sono volutamente colorate in modo diverso. Dove si incontrano, la zona viola/tratteggiata evidenzia l’area comune.
+          Punti progressivi: principali sempre visibili, zoom 9+ comuni importanti, zoom 10+ comuni medi, zoom 11+ dettagli, zoom 12+ frazioni/località.
         </div>
       `;
 
-      const div2 = L.DomUtil.create('div', 'legend', wrapper);
-      div2.innerHTML = `
-        <h3>Legenda punti</h3>
-        <div class="legend-row"><span class="badge center-pn"></span>Centro Pordenone</div>
-        <div class="legend-row"><span class="badge center-sd"></span>Centro San Donà di Piave</div>
-        <div class="legend-row"><span class="badge overlap"></span>Città/zone nella sovrapposizione o molto utili a entrambe</div>
-        <div class="legend-row"><span class="badge inside"></span>Zona interna principalmente a una delle due aree</div>
-        <div class="legend-row"><span class="badge edge"></span>Zona limite: dipende da traffico/orario</div>
-        <div class="legend-row"><span class="badge outside"></span>Spesso oltre 1 ora</div>
-        <div class="note">
-          La mappa non usa un raggio d’aria: è una stima operativa basata sulle principali direttrici stradali. Per campagne o logistica reale, i tempi vanno verificati su Google Maps/Mapbox in fascia oraria specifica.
-        </div>
-      `;
+      L.DomEvent.disableClickPropagation(wrapper);
+      L.DomEvent.disableScrollPropagation(wrapper);
+
+      button.addEventListener('click', function(e) {
+        e.preventDefault();
+        wrapper.classList.toggle('open');
+        button.innerHTML = wrapper.classList.contains('open') ? '× Chiudi legenda' : '☰ Legenda';
+      });
 
       return wrapper;
     }
   });
 
+  const Counter = L.Control.extend({
+    options: { position: 'topright' },
+    onAdd: function () {
+      const div = L.DomUtil.create('div', 'counter');
+      div.id = 'zoomCounter';
+      div.innerHTML = 'Zoom · punti visibili';
+      return div;
+    }
+  });
+
   map.addControl(new CombinedLegend());
+  map.addControl(new Counter());
 
   const allBounds = L.latLngBounds([...pordenone60, ...sanDona60]);
   map.fitBounds(allBounds, { padding: [30, 30] });
+  updateZoomLayers();
 </script>
 </body>
 </html>
